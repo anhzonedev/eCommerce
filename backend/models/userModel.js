@@ -1,12 +1,13 @@
 import mongoose from "mongoose";
 
+// Update the address schema to include province
 const addressSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true },
     phone: { type: String, required: true },
-    ward: { type: String },
-    district: { type: String },
-    city: { type: String },
+    province: { type: String, required: true },
+    district: { type: String, required: true },
+    ward: { type: String, required: true },
     addressLine: { type: String, required: true },
     note: { type: String },
   },
@@ -40,6 +41,14 @@ const userSchema = new mongoose.Schema(
     avatar: {
       type: String,
       default: null,
+    },
+    shopName: {
+      type: String,
+    },
+    addressSeller: { type: String },
+    addressShop: { type: String },
+    country: {
+      type: String,
     },
     password: {
       type: String,

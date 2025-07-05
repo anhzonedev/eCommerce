@@ -4,7 +4,8 @@ import { FaFacebookF, FaGoogle, FaTwitter, FaPaperPlane } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
-import Loader from "../components/Loader";
+import Loader from "../components/common/Loader/Loader";
+import CustomButton from "../components/common/Button/CustomButton";
 const Login = () => {
   const [state, setState] = useState("Login");
   const [purpose, setPurpose] = useState("");
@@ -21,8 +22,11 @@ const Login = () => {
         });
         if (response.data.success) {
           localStorage.setItem("token", response.data.token);
-          localStorage.setItem("user", JSON.stringify(response.data.user));
-          setUser(response.data.user);
+          localStorage.setItem(
+            "account",
+            JSON.stringify(response.data.account)
+          );
+          setUser(response.data.account); 
           message.success(response.data.message);
           setTimeout(() => {
             window.location.href = "/";
@@ -125,7 +129,6 @@ const Login = () => {
           <div className="bg-white shadow h-auto min-w-[800px] flex flex-col items-center justify-center p-8 rounded-xl">
             <Form
               labelCol={{ span: 24 }}
-              name="login"
               className="w-[700px]"
               initialValues={{ remember: true }}
               onFinish={onFinish}
@@ -293,22 +296,20 @@ const Login = () => {
                 )}
                 <div className="col-span-2 row-start-5">
                   <Form.Item>
-                    <Button
-                      className="w-full !h-[40px] !rounded-xl !bg-primary !text-white !text-lg !my-4"
-                      type="primary"
+                    <CustomButton
+                      item={
+                        state === "Login"
+                          ? "Đăng nhập"
+                          : state === "Register"
+                          ? "Đăng ký"
+                          : state === "VeryOtp"
+                          ? "Xác thực OTP"
+                          : state === "ForgotPass"
+                          ? "Gửi Email xác thực"
+                          : "Gửi mật khẩu mới"
+                      }
                       htmlType="submit"
-                    >
-                      <FaPaperPlane />
-                      {state === "Login"
-                        ? "Đăng nhập"
-                        : state === "Register"
-                        ? "Đăng ký"
-                        : state === "VeryOtp"
-                        ? "Xác thực OTP"
-                        : state === "ForgotPass"
-                        ? "Gửi Email xác thực"
-                        : "Gửi mật khẩu mới"}
-                    </Button>
+                    />
                   </Form.Item>
                 </div>
                 <div className="col-span-2 row-start-6  flex items-center justify-center text-base">

@@ -5,8 +5,8 @@ import validator from "validator";
 import User from "../models/userModel.js";
 import sendEmail from "../utils/sendEmail.js";
 import { otpEmailTemplate } from "../utils/emailTemplates.js";
-import fs from "fs";
-import { cloudinary } from "../config/cloudinary.js";
+import { loginAccount } from "./authController.js";
+import Banner from "../models/bannerModel.js";
 
 dotenv.config();
 
@@ -78,159 +78,17 @@ export const registerUser = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-
-export const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Vui lòng nhập đủ thông tin!" });
-    }
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "Tài khoản không tồn tại. Hãy kiểm tra lại!",
-      });
-    }
-
-    if (!user.emailVerified) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Email chưa được xác thực. Vui lòng kiểm tra hộp thư email để xác thực!",
-      });
-    }
-
-    if (user.isBlocked) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Tài khoản của bạn đang khóa. Vui lòng liên hệ tổng đài để xử lý!",
-      });
-    }
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: "Tài khoản hoặc mật khẩu không đúng",
-      });
-    }
-
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "Đăng nhập thành công",
-      token,
-      user: {
-        id: user._id,
-        name: user.username,
-        email: user.email,
-        phone: user.phone,
-        avatar: user.avatar,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Lỗi máy chủ" });
-  }
-};
-
-export const updateAvatar = async (req, res) => {
-  try {
-    const userID = req.user.id;
-
-    const user = await User.findById(userID);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Không tìm thấy người dùng" });
-    }
-
-    if (req.file) {
-      try {
-        if (user.avatar) {
-          const publicID = user.avatar
-            .split("/")
-            .slice(-2)
-            .join("/")
-            .split(".")[0];
-          await cloudinary.uploader.destroy(publicID);
-        }
-
-        user.avatar = req.file.path;
-        await user.save();
-
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-
-        return res.status(200).json({
-          success: true,
-          message: "Tải ảnh đại diện thành công",
-          avatar: user.avatar,
-        });
-      } catch (error) {
-        if (fs.existsSync(req.file?.path) && fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        return res
-          .status(500)
-          .json({ success: false, message: "Lỗi máy chủ khi cập nhật ảnh" });
-      }
-    }
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi máy chủ" });
-  }
-};
-
-export const updateProfile = async (req, res) => {
-  try {
-    const userID = req.user.id;
-    const { username, phone } = req.body;
-
-    const user = await User.findById(userID);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Không tìm thấy người dùng!" });
-    }
-
-    user.username = username || user.username;
-    user.phone = phone || user.phone;
-
-    await user.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Cập nhật thông tin thành công",
-      user: {
-        name: user.username,
-        phone: user.phone,
-      },
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi máy chủ" });
-  }
-};
+export const loginUser = loginAccount;
 
 export const createAddress = async (req, res) => {
   try {
     const userID = req.user.id;
-    const { fullName, phone, ward, district, city, addressLine, note } =
-      req.body;
-    if (!fullName || !phone || !ward || !district || !city || !addressLine) {
+    const { fullName, phone, province, ward, district, addressLine, note } = req.body;
+
+    if (!fullName || !phone || !province || !ward || !district || !addressLine) {
       return res.status(400).json({
         success: false,
-        message: "Vui lòng điền đầy đủ thông tin đụa chỉ!",
+        message: "Vui lòng điền đầy đủ thông tin địa chỉ!",
       });
     }
 
@@ -242,17 +100,25 @@ export const createAddress = async (req, res) => {
       });
     }
 
+    if (user.isBlocked) {
+      return res.status(400).json({
+        success: false,
+        message: "Tài khoản đã bị khóa, hãy liên hệ tổng đài để hỗ trợ!",
+      });
+    }
+
     const newAddress = {
       fullName,
       phone,
+      province,
       ward,
       district,
-      city,
       addressLine,
       note: note || "",
     };
     user.address.push(newAddress);
     await user.save();
+
     return res.status(200).json({
       success: true,
       message: "Thêm địa chỉ thành công",
@@ -272,6 +138,13 @@ export const getAddress = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Không tìm thấy tài khoản!" });
+    }
+
+    if (user.isBlocked) {
+      return res.status(400).json({
+        success: false,
+        message: "Tài khoản đã bị khóa, hãy liên hệ tổng đài để hỗ trợ!",
+      });
     }
 
     return res.status(200).json({
@@ -294,6 +167,13 @@ export const deleteAddress = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Không tìm thấy tài khoản!" });
+    }
+
+    if (user.isBlocked) {
+      return res.status(400).json({
+        success: false,
+        message: "Tài khoản đã bị khóa, hãy liên hệ tổng đài để hỗ trợ!",
+      });
     }
     const addressIndex = user.address.findIndex(
       (addr) => addr._id.toString() === addressID
@@ -330,6 +210,13 @@ export const updateAddress = async (req, res) => {
         .json({ success: false, message: "Không tìm thấy tài khoản!" });
     }
 
+    if (user.isBlocked) {
+      return res.status(400).json({
+        success: false,
+        message: "Tài khoản đã bị khóa, hãy liên hệ tổng đài để hỗ trợ!",
+      });
+    }
+
     const addr = user.address.id(addressID);
     if (!addr) {
       return res
@@ -354,5 +241,25 @@ export const updateAddress = async (req, res) => {
   } catch (error) {
     console.log(error);
     return res.status(500).json({ success: false, message: "Lỗi máy chủ" });
+  }
+};
+
+export const getPublicBanners = async (req, res) => {
+  try {
+    const banners = await Banner.find({})
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .exec();
+
+    return res.status(200).json({
+      success: true,
+      banners,
+    });
+  } catch (error) {
+    console.error(error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Có lỗi máy chủ. Vui lòng thử lại!",
+    });
   }
 };

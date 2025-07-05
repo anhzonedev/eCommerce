@@ -6,15 +6,17 @@ const AppcontextProvider = (props) => {
   const [user, setUser] = useState("");
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  localStorage.getItem("token");
+
   const logout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem("account");
     setUser("");
   };
+
   useEffect(() => {
-    setUser(JSON.parse(localStorage.getItem("user")));
+    setUser(JSON.parse(localStorage.getItem("account")));
   }, []);
+
   const contextValue = {
     user,
     setUser,

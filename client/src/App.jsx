@@ -1,20 +1,15 @@
 import React from "react";
 import "@ant-design/v5-patch-for-react-19";
-import { Route, Routes } from "react-router-dom";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
-import MyProfile from "./pages/MyProfile";
+import Footer from "./components/layout/Footer/Footer";
+import AppRoutes from "./routes/AppRoutes";
+import Navbar from "./components/layout/Navbar/Navbar";
 const App = () => {
   return (
-    <div className="w-full bg-blue-50/60">
+    <div className="min-h-screen flex flex-col w-full">
       <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/profile" element={<MyProfile />} />
-      </Routes>
+      <div className="flex-1">
+        <AppRoutes />
+      </div>
       <Footer />
     </div>
   );
